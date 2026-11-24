@@ -572,119 +572,27 @@ async function masukKelas(){
 
     }
 
-    function gantiLayoutMasukKelas(){
+   function gantiLayoutMasukKelas(){
 
-        let jumlah = localStorage.getItem("jumlahKelompok") || "6";
+        const bg = document.getElementById("bgMasukKelas");
 
-        let bg = document.getElementById("bgMasukKelas");
+        bg.src = "MasukKelas6.png";
 
-        const btnKembali = document.getElementById("btnKembali");
-
-        if(jumlah=="4"){
-
-            bg.src="masukkelas4.png";
-
-            kelompok1.style.top="274px";
-            kelompok2.style.top="274px";
-            kelompok3.style.top="274px";
-            kelompok4.style.top="274px";
-            kelompok5.style.top="274px";
-
-            kelompok1.style.left="525px";
-            kelompok2.style.left="591px";
-            kelompok3.style.left="658px";
-            kelompok4.style.left="723px";
-
-            kelompok5.style.display="none";
-            kelompok6.style.display="none";
-
-            anggotaKelompok.style.top="400px";
-            anggotaKelompok.style.left="514px";
-            anggotaKelompok.style.width="250px";
-            anggotaKelompok.style.height="68px";
-
-            kodeKelas.style.top="524px";
-            kodeKelas.style.left="515px";
-            kodeKelas.style.width="250px";
-            kodeKelas.style.height="38px";
-
-            btnMasuk.style.top="584px";
-            btnMasuk.style.left="553px";
-            btnMasuk.style.width="167px";
-            btnMasuk.style.background="transparent";
-
-            btnKembali.style.top = "507px";
-            btnKembali.style.left = "455px";
-            btnKembali.style.width = "48px";
-            btnKembali.style.height = "43px";
-
+        for(let i = 1; i <= 6; i++){
+            const kelompok = document.getElementById("kelompok" + i);
+            kelompok.style.display = "block";
+            kelompok.style.top = "388px";
+            kelompok.style.left = (510 + (i - 1) * 45.6) + "px";
         }
 
-        else if(jumlah=="5"){
+        anggotaKelompok.style.top = "510px";
+        anggotaKelompok.style.left = "512px";
 
-            bg.src="masukkelas5.png";
+        kodeKelas.style.top = "290px";
+        kodeKelas.style.left = "513px";
 
-            kelompok1.style.top="284px";
-            kelompok2.style.top="284px";
-            kelompok3.style.top="284px";
-            kelompok4.style.top="284px";
-            kelompok5.style.top="284px";
-
-            kelompok1.style.left="494px";
-            kelompok2.style.left="558px";
-            kelompok3.style.left="622px";
-            kelompok4.style.left="686px";
-            kelompok5.style.left="750px";
-
-            kelompok5.style.display="block";
-            kelompok6.style.display="none";
-
-            anggotaKelompok.style.top="420px";
-            anggotaKelompok.style.left="487px";
-            anggotaKelompok.style.width="300px";
-            anggotaKelompok.style.height="75px";
-
-            kodeKelas.style.top="250px";
-            kodeKelas.style.left="487px";
-            kodeKelas.style.width="300px";
-            kodeKelas.style.height="45px";
-
-            btnMasuk.style.top="610px";
-            btnMasuk.style.left="540px";
-            btnMasuk.style.width="190px";
-            btnMasuk.style.background="transparent";
-
-        }
-
-        else{
-
-            bg.src="masukkelas6.png";
-
-            kelompok1.style.display="block";
-            kelompok2.style.display="block";
-            kelompok3.style.display="block";
-            kelompok4.style.display="block";
-            kelompok5.style.display="block";
-            kelompok6.style.display="block";
-
-            kelompok1.style.left="510px";
-            kelompok2.style.left="557px";
-            kelompok3.style.left="603px";
-            kelompok4.style.left="648px";
-            kelompok5.style.left="693px";
-            kelompok6.style.left="738px";
-
-            anggotaKelompok.style.top="510px";
-            anggotaKelompok.style.left="512px";
-
-            kodeKelas.style.top="290px";
-            kodeKelas.style.left="513px";
-
-            btnMasuk.style.top="598px";
-            btnMasuk.style.left="550px";
-
-        }
-
+        btnMasuk.style.top = "598px";
+        btnMasuk.style.left = "550px";
     }
 
 </script>
