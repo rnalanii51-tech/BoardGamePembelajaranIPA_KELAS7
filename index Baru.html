@@ -460,86 +460,76 @@ function bukaHalaman(){
 </div>
 
 <script>
-function masukKelas(){
 
-    const kelompok = document.querySelector('input[name="kelompok"]:checked');
+async function masukKelas(){
 
-    const anggota = document.getElementById("anggotaKelompok").value
-        .trim()
-        .split("\n")
+    const kelompok = document.querySelector(
+        'input[name="kelompok"]:checked'
+    );
+
+    const anggota = document.getElementById("anggotaKelompok")
+        .value.trim().split("\n")
         .map(x => x.trim())
-        .filter(x => x != "");
+        .filter(x => x !== "");
 
-    const kodeInput =
-        document.getElementById("kodeKelas").value.trim();
-
-    const kodeAsli =
-        localStorage.getItem("kode_Kelass");
+    const kodeInput = document.getElementById("kodeKelas")
+        .value.trim().toUpperCase();
 
     if(!kelompok){
         alert("Pilih kelompok!");
         return;
     }
 
-    if(anggota.length == 0){
+    if(anggota.length === 0){
         alert("Masukkan anggota!");
         return;
     }
 
-    if(kodeInput != kodeAsli){
-        alert("Kode kelas salah!");
-        return;
-    }
-
-    // Simpan kelompok pemain
-    localStorage.setItem(
-        "kelompokSaya",
-        parseInt(kelompok.value)-1
-    );
-
-    localStorage.setItem(
-        "anggotaKelompok",
-        JSON.stringify(anggota)
-    );
-
-    let dataPemain =
-        JSON.parse(
-            localStorage.getItem("dataPemain") || "[]"
+    try {
+        const kelasRef = window.ref(
+            window.database,
+            "kelas/" + kodeInput
         );
 
-    const noKelompok =
-        parseInt(kelompok.value);
+        const hasil = await window.get(kelasRef);
 
-    let dataKelompok =
-        dataPemain.find(
-            item => item.kelompok === noKelompok
+        if(!hasil.exists()){
+            alert("Kode kelas tidak ditemukan!");
+            return;
+        }
+
+        const dataKelas = hasil.val();
+        const noKelompok = parseInt(kelompok.value);
+
+        if(noKelompok > parseInt(dataKelas.jumlahKelompok)){
+            alert("Kelompok tidak tersedia di kelas ini!");
+            return;
+        }
+
+        await window.set(
+            window.ref(
+                window.database,
+                "kelas/" + kodeInput + "/dataPemain/" + noKelompok
+            ),
+            {
+                kelompok: noKelompok,
+                anggota: anggota
+            }
         );
 
-    if(dataKelompok){
+        localStorage.setItem("kelompokSaya", noKelompok - 1);
+        localStorage.setItem("anggotaKelompok", JSON.stringify(anggota));
+        localStorage.setItem("kode_Kelass", kodeInput);
+        localStorage.setItem("jumlahKelompok", dataKelas.jumlahKelompok);
 
-        dataKelompok.anggota = anggota;
+        buka("papanpermainann");
 
-    }else{
-
-        dataPemain.push({
-            kelompok: noKelompok,
-            anggota: anggota
-        });
-
+    } catch(error) {
+        console.error(error);
+        alert("Gagal bergabung. Periksa koneksi Firebase.");
     }
-
-    localStorage.setItem(
-        "dataPemain",
-        JSON.stringify(dataPemain)
-    );
-
-    // Update dashboard guru
-    refreshDashboard();
-
-    // LANGSUNG MASUK KE PAPAN PERMAINAN
-    buka("papanpermainann");
-
 }
+
 
     function buka(id){
 
@@ -5559,9 +5549,10 @@ function kembaliMenu(){
 
 <script>
 
-function buatKelas(){
 
-    let kelompok = document.querySelector(
+async function buatKelas(){
+
+    const kelompok = document.querySelector(
         'input[name="jumlahKelompok"]:checked'
     );
 
@@ -5570,46 +5561,33 @@ function buatKelas(){
         return;
     }
 
-    // =========================
-    // BUAT KODE KELAS
-    // =========================
+    const kode =
+        "ST" + Math.floor(1000 + Math.random() * 9000);
 
-    let kode = localStorage.getItem("kode_Kelass");
-
-    if(!kode){
-
-        kode =
-            "ST" +
-            Math.floor(1000 + Math.random() * 9000);
-
-        localStorage.setItem(
-            "kode_Kelass",
-            kode
+    try {
+        await window.set(
+            window.ref(window.database, "kelas/" + kode),
+            {
+                kode: kode,
+                jumlahKelompok: kelompok.value,
+                status: "Belum Dimulai",
+                dataPemain: {}
+            }
         );
+
+        localStorage.setItem("kode_Kelass", kode);
+        localStorage.setItem("jumlahKelompok", kelompok.value);
+
+        document.getElementById("tampilKode").innerHTML = kode;
+
+        buka("kode_Kelass");
+
+    } catch(error) {
+        console.error(error);
+        alert("Gagal membuat kelas. Periksa koneksi Firebase.");
     }
-
-    // =========================
-    // SIMPAN JUMLAH KELOMPOK
-    // =========================
-
-    localStorage.setItem(
-        "jumlahKelompok",
-        kelompok.value
-    );
-
-    // =========================
-    // TAMPILKAN KODE
-    // =========================
-
-    document.getElementById("tampilKode").innerHTML = kode;
-
-    // =========================
-    // LANGSUNG PINDAH HALAMAN
-    // =========================
-
-    buka("kode_Kelass");
-
 }
+
 
 </script>
 
@@ -6134,275 +6112,213 @@ async function muatHasilRefleksi() {
 
 <script>
 
+
 function refreshDashboard(){
 
-    // Ambil data
     const kode = localStorage.getItem("kode_Kelass") || "-";
-    const jumlahKelompok = localStorage.getItem("jumlahKelompok") || "0";
-    const dataPemain = JSON.parse(localStorage.getItem("dataPemain") || "[]");
-    const status = localStorage.getItem("statusPermainan") || "Belum Dimulai";
-    const skorDashboard = document.getElementById("skorDashboard");
 
-    // Ganti background sesuai jumlah kelompok
-    if (jumlahKelompok == "4") {
-        document.getElementById("bgDashboard").src = "dashboardguruu.png";
-    }
-    else if (jumlahKelompok == "5") {
-        document.getElementById("bgDashboard").src = "dashboardguruu5.png";
-    }
-    else if (jumlahKelompok == "6") {
-        document.getElementById("bgDashboard").src = "DashboardGuruu.png";
-    }
+    if(kode === "-") return;
 
-    // Hitung jumlah siswa
-    let jumlahSiswa = 0;
-    dataPemain.forEach(item=>{
-        jumlahSiswa += item.anggota.length;
-    });
+    // Hindari memasang listener berulang kali
+    if(window.dashboardListenerKode === kode) return;
 
-    // Tampilkan data dashboard
-    document.getElementById("kodeDashboard").innerHTML = kode;
-    document.getElementById("jumlahDashboard").innerHTML = jumlahKelompok;
+    window.dashboardListenerKode = kode;
 
-    document.getElementById("kodeDashboard").textContent =
-        localStorage.getItem("kode_Kelass") || "-";
+    window.onValue(
+        window.ref(window.database, "kelas/" + kode),
+        (snapshot) => {
 
-    document.getElementById("statusDashboard").textContent =
-        localStorage.getItem("statusPermainan") || "Belum Dimulai";
+            if(!snapshot.exists()) return;
 
-    if(document.getElementById("jumlahSiswaDashboard")){
-        document.getElementById("jumlahSiswaDashboard").innerHTML = jumlahSiswa;
-    }
+            const dataKelas = snapshot.val();
+            const jumlahKelompok = dataKelas.jumlahKelompok || 6;
+            const status = dataKelas.status || "Belum Dimulai";
 
-    if(document.getElementById("statusDashboard")){
-        document.getElementById("statusDashboard").innerHTML = status;
-    }
+            const dataPemain = Object.values(
+                dataKelas.dataPemain || {}
+            ).sort((a,b) => Number(a.kelompok) - Number(b.kelompok));
 
-    document.getElementById("skorDashboard").innerHTML = `
-        <div style="display:flex;justify-content:space-between;width:100%;">
-            <span>10</span>
-            <span>20</span>
-            <span>30</span>
-            <span>40</span>
-        </div>
-    `;
+            localStorage.setItem("jumlahKelompok", jumlahKelompok);
+            localStorage.setItem("statusPermainan", status);
 
-    // =====================
-    // SKOR KELOMPOK
-    // =====================
+            // Background dashboard
+            if(jumlahKelompok == 4){
+                document.getElementById("bgDashboard").src = "dashboardguruu.png";
+            } else if(jumlahKelompok == 5){
+                document.getElementById("bgDashboard").src = "dashboardguruu5.png";
+            } else if(jumlahKelompok == 6){
+                document.getElementById("bgDashboard").src = "DashboardGuruu.png";
+            }
 
-    skorDashboard.innerHTML = "";
+            // Informasi kelas
+            document.getElementById("kodeDashboard").textContent = kode;
+            document.getElementById("jumlahDashboard").textContent = jumlahKelompok;
+            document.getElementById("statusDashboard").textContent = status;
 
-    const jumlah = parseInt(jumlahKelompok);
-
-    // Posisi skor
-    let posisi = [];
-
-    if (jumlah == 4) {
-        posisi = [
-            {left:35},
-            {left:138},
-            {left:239},
-            {left:343}
-        ];
-    }
-    else if (jumlah == 5) {
-        posisi = [
-            {left:20},
-            {left:108},
-            {left:194},
-            {left:274},
-            {left:358}
-        ];
-    }
-    else if (jumlah == 6) {
-        posisi = [
-            {left:5},
-            {left:85},
-            {left:165},
-            {left:240},
-            {left:309},
-            {left:378}
-        ];
-    }
-
-    for (let i = 1; i <= jumlah; i++) {
-
-        const skor = parseInt(localStorage.getItem("skorKelompok" + i)) || 0;
-
-        const kotak = document.createElement("div");
-
-        kotak.style.position = "absolute";
-        kotak.style.left = posisi[i - 1].left + "px";
-        kotak.style.top = "0px";
-        kotak.style.width = "70px";
-        kotak.style.textAlign = "center";
-        kotak.style.fontSize = "32px";
-        kotak.style.fontWeight = "bold";
-        kotak.style.color = "black";
-
-        kotak.textContent = skor;
-
-        skorDashboard.appendChild(kotak);
-    }
-
-    function spinGiliran() {
-        alert("Fitur Spin Giliran akan dimulai!");
-    }
-
-    // =====================
-    // DAFTAR SISWA
-    // =====================
-    let html = "";
-
-    let no = 1;
-    let top = 0;
-
-    // Ambil jumlah kelompok yang valid
-    const batasKelompok = [6].includes(
-        parseInt(localStorage.getItem("jumlahKelompok"), 6)
-    )
-        ? parseInt(localStorage.getItem("jumlahKelompok"), 6)
-        : 6;
-
-    // Tampilkan siswa hanya dari kelompok yang valid
-    dataPemain
-        .filter(kelompok =>
-            Number(kelompok.kelompok) >= 1 &&
-            Number(kelompok.kelompok) <= batasKelompok
-        )
-        .forEach(kelompok => {
-
-            kelompok.anggota.forEach(nama => {
-
-                html += `
-                <div style="
-                    position:absolute;
-                    top:${top}px;
-                    left:0;
-                    width:100%;
-                    height:30px;
-                ">
-
-                    <span style="position:absolute; left:0px;">
-                        ${no}
-                    </span>
-
-                    <span style="position:absolute; left:87px;">
-                        ${nama}
-                    </span>
-
-                    <span style="position:absolute; left:285px;">
-                        ${kelompok.kelompok}
-                    </span>
-
-                </div>
-                `;
-
-                top += 30;
-                no++;
-
+            let jumlahSiswa = 0;
+            dataPemain.forEach(item => {
+                jumlahSiswa += (item.anggota || []).length;
             });
 
-        });
+            if(document.getElementById("jumlahSiswaDashboard")){
+                document.getElementById("jumlahSiswaDashboard").textContent = jumlahSiswa;
+            }
 
-    // Tambahkan tinggi agar bisa discroll
-    html += `<div style="height:${top}px;"></div>`;
+            // Skor kelompok tetap menggunakan penyimpanan lokal guru
+            const skorDashboard = document.getElementById("skorDashboard");
+            skorDashboard.innerHTML = "";
 
-    document.getElementById("daftarSiswa").innerHTML = html;
+            const posisi = jumlahKelompok == 4
+                ? [{left:35},{left:138},{left:239},{left:343}]
+                : jumlahKelompok == 5
+                ? [{left:20},{left:108},{left:194},{left:274},{left:358}]
+                : [{left:5},{left:85},{left:165},{left:240},{left:309},{left:378}];
 
+            for(let i = 1; i <= jumlahKelompok; i++){
+                const kotak = document.createElement("div");
+                kotak.style.cssText = `
+                    position:absolute;
+                    left:${posisi[i-1].left}px;
+                    top:0;
+                    width:70px;
+                    text-align:center;
+                    font-size:32px;
+                    font-weight:bold;
+                    color:black;
+                `;
+                kotak.textContent =
+                    parseInt(localStorage.getItem("skorKelompok" + i)) || 0;
+
+                skorDashboard.appendChild(kotak);
+            }
+
+            // Daftar siswa
+            let html = "";
+            let no = 1;
+            let top = 0;
+
+            dataPemain.forEach(kelompok => {
+                (kelompok.anggota || []).forEach(nama => {
+                    html += `
+                        <div style="
+                            position:absolute;
+                            top:${top}px;
+                            left:0;
+                            width:100%;
+                            height:30px;
+                        ">
+                            <span style="position:absolute;left:0px;">${no}</span>
+                            <span style="position:absolute;left:87px;">${nama}</span>
+                            <span style="position:absolute;left:285px;">${kelompok.kelompok}</span>
+                        </div>
+                    `;
+                    top += 30;
+                    no++;
+                });
+            });
+
+            html += `<div style="height:${top}px;"></div>`;
+            document.getElementById("daftarSiswa").innerHTML = html;
+        }
+    );
 }
 
-function mulaiPermainan(){
 
-    // Reset skor semua kelompok
-    const jumlah =
-        parseInt(localStorage.getItem("jumlahKelompok")) || 0;
+async function mulaiPermainan(){
+    const kode = localStorage.getItem("kode_Kelass");
+    const jumlah = parseInt(localStorage.getItem("jumlahKelompok")) || 0;
 
     for(let i = 1; i <= jumlah; i++){
         localStorage.setItem("skorKelompok"+i, 0);
     }
 
-    // Ubah status permainan
-    localStorage.setItem(
-        "statusPermainan",
-        "Sedang Berlangsung"
-    );
+    try {
+        await window.update(
+            window.ref(window.database, "kelas/" + kode),
+            { status: "Sedang Berlangsung" }
+        );
 
-    // Refresh dashboard
-    refreshDashboard();
-
-    alert("Permainan dimulai!");
-
+        localStorage.setItem("statusPermainan", "Sedang Berlangsung");
+        refreshDashboard();
+        alert("Permainan dimulai!");
+    } catch(error) {
+        console.error(error);
+        alert("Gagal memperbarui status permainan di Firebase.");
+    }
 }
 
-function akhiriPermainan(){
-
+async function akhiriPermainan(){
     if(!confirm("Apakah Anda yakin ingin mengakhiri permainan?")){
         return;
     }
 
-    // Ubah status permainan
-    localStorage.setItem(
-        "statusPermainan",
-        "Permainan Selesai"
-    );
+    const kode = localStorage.getItem("kode_Kelass");
 
-    // Refresh Dashboard Guru
-    refreshDashboard();
+    try {
+        await window.update(
+            window.ref(window.database, "kelas/" + kode),
+            { status: "Permainan Selesai" }
+        );
 
-    alert("Permainan telah berakhir.");
-
+        localStorage.setItem("statusPermainan", "Permainan Selesai");
+        refreshDashboard();
+        alert("Permainan telah berakhir.");
+    } catch(error) {
+        console.error(error);
+        alert("Gagal memperbarui status permainan di Firebase.");
+    }
 }
 
-    function resetRoom() {
+    async function resetRoom() {
         if (!confirm("Yakin ingin mereset room? Semua data permainan akan dihapus.")) {
             return;
         }
 
-        // Buat kode kelas baru
-        const kodeBaru = Math.random()
-            .toString(36)
-            .substring(2, 8)
-            .toUpperCase();
+        const kodeLama = localStorage.getItem("kode_Kelass");
+        const jumlah = parseInt(localStorage.getItem("jumlahKelompok")) || 6;
+        const kodeBaru = "ST" + Math.floor(1000 + Math.random() * 9000);
 
-        localStorage.setItem("kode_Kelass", kodeBaru);
+        try {
+            // Buat room baru di Firebase
+            await window.set(
+                window.ref(window.database, "kelas/" + kodeBaru),
+                {
+                    kode: kodeBaru,
+                    jumlahKelompok: jumlah,
+                    status: "Belum Dimulai",
+                    dataPemain: {}
+                }
+            );
 
-        // Reset data pemain
-        localStorage.setItem("dataPemain", JSON.stringify([]));
+            // Hapus room lama dari Firebase
+            if (kodeLama) {
+                await window.remove(
+                    window.ref(window.database, "kelas/" + kodeLama)
+                );
+            }
 
-        // Reset skor semua kelompok
-        const jumlah =
-            parseInt(localStorage.getItem("jumlahKelompok")) || 6;
+            localStorage.setItem("kode_Kelass", kodeBaru);
+            localStorage.setItem("dataPemain", JSON.stringify([]));
+            localStorage.setItem("statusPermainan", "Belum Dimulai");
 
             for (let i = 1; i <= jumlah; i++) {
                 localStorage.setItem("skorKelompok" + i, 0);
             }
 
-            // Reset status permainan
-            localStorage.setItem("statusPermainan", "Belum Dimulai");
+            const dataReset = [
+                "urutanGiliran", "giliranSekarang", "indexGiliran",
+                "posisiPemain", "sedangJalan", "skipGiliran",
+                "sudahKeluarStart", "giliran", "spinJumlahKelompok",
+                "spinKelompokSisa"
+            ];
 
-            // Hapus data permainan
-            localStorage.removeItem("urutanGiliran");
-            localStorage.removeItem("giliranSekarang");
-            localStorage.removeItem("indexGiliran");
-            localStorage.removeItem("posisiPemain");
-            localStorage.removeItem("sedangJalan");
-            localStorage.removeItem("skipGiliran");
-            localStorage.removeItem("sudahKeluarStart");
-            localStorage.removeItem("giliran");
+            dataReset.forEach(item => localStorage.removeItem(item));
 
-            // Hapus data Spin Giliran
-            localStorage.removeItem("spinJumlahKelompok");
-            localStorage.removeItem("spinKelompokSisa");
-
-            // Reset variabel spin
             daftarSisa = [];
             daftarUrutan = [];
             sudutRoda = 0;
             rodaSedangBerputar = false;
 
-            // Tutup roda spin jika masih terbuka
             if (lapisanRoda) {
                 lapisanRoda.remove();
                 lapisanRoda = null;
@@ -6411,10 +6327,15 @@ function akhiriPermainan(){
             canvasRoda = null;
             ctxRoda = null;
 
-            // Perbarui dashboard
+            window.dashboardListenerKode = null;
             refreshDashboard();
 
-            alert("Room berhasil direset! Spin Giliran siap digunakan kembali.");
+            alert("Room berhasil direset! Kode kelas baru: " + kodeBaru);
+
+        } catch (error) {
+            console.error(error);
+            alert("Gagal mereset room di Firebase. Periksa koneksi.");
+        }
     }
 
 // JANGAN langsung dipanggil di sini
